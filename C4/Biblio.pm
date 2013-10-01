@@ -3035,8 +3035,32 @@ sub _koha_add_biblio {
     	if ( $biblio->{'seriestitle'} ) { $biblio->{'serial'} = 1 }
     }
 
+    ### Validating biblionumber.
+    my $biblionumber;
+    my $isBiblioNumberOk = ''; #placeholder for the sql-clause which inserts biblionumber
+    if (exists $biblio->{'biblionumber'}) {
+        $biblionumber = $biblio->{'biblionumber'};
+        if (! ($biblionumber =~ /^\d+$/) ) {
+            $error .= "C4::Biblio::_koha_add_biblio():> Biblionumber $biblionumber is not a number! Using a new biblionumber\n";
+        }
+        elsif (! ($biblionumber > 0)) {
+            $error .= "C4::Biblio::_koha_add_biblio():> Biblionumber $biblionumber is not greater than 0! Using a new biblionumber\n";
+        }
+        #The real Perl LONG_MAX is 2147483646, but using 2147483640
+        #  so we can detect the imminent primary key exhaustion before it actually is exhausted.
+        elsif (! ($biblionumber < 2147483640)) {
+            $error .= "C4::Biblio::_koha_add_biblio():> Biblionumber $biblionumber is too large for Perl! Using a new biblionumber\n";
+        }
+        else {
+            #We have validated the biblionumber and can prepare to insert it.
+            $isBiblioNumberOk = 'biblionumber = ?,';
+        }
+
+    }
+
     my $query = "INSERT INTO biblio
         SET frameworkcode = ?,
+            $isBiblioNumberOk
             author = ?,
             title = ?,
             unititle =?,
@@ -3048,16 +3072,31 @@ sub _koha_add_biblio {
             abstract = ?
         ";
     my $sth = $dbh->prepare($query);
-    $sth->execute(
-        $frameworkcode, $biblio->{'author'},      $biblio->{'title'},         $biblio->{'unititle'}, $biblio->{'notes'},
-        $biblio->{'serial'},        $biblio->{'seriestitle'}, $biblio->{'copyrightdate'}, $biblio->{'abstract'}
-    );
 
-    my $biblionumber = $dbh->{'mysql_insertid'};
+    if ($isBiblioNumberOk) {
+        $sth->execute(
+            $frameworkcode, $biblionumber, $biblio->{'author'},      $biblio->{'title'},         $biblio->{'unititle'}, $biblio->{'notes'},
+            $biblio->{'serial'},        $biblio->{'seriestitle'}, $biblio->{'copyrightdate'}, $biblio->{'abstract'}
+        );
+    }
+    else {
+        $sth->execute(
+            $frameworkcode, $biblio->{'author'},      $biblio->{'title'},         $biblio->{'unititle'}, $biblio->{'notes'},
+            $biblio->{'serial'},        $biblio->{'seriestitle'}, $biblio->{'copyrightdate'}, $biblio->{'abstract'}
+        );
+    }
+
+
+    $biblionumber = $isBiblioNumberOk ? $biblionumber : $dbh->{'mysql_insertid'};
     if ( $dbh->errstr ) {
         $error .= "ERROR in _koha_add_biblio $query" . $dbh->errstr;
+    }
+
+
+    if (defined $error) {
         warn $error;
     }
+
 
     $sth->finish();
 
@@ -3184,8 +3223,32 @@ sub _koha_add_biblioitem {
     my ( $dbh, $biblioitem ) = @_;
     my $error;
 
+    ### Validating biblionumber.
+    my $biblioitemnumber;
+    my $isBiblioitemNumberOk = ''; #placeholder for the sql-clause which inserts biblionumber
+    if (exists $biblioitem->{'biblioitemnumber'}) {
+        $biblioitemnumber = $biblioitem->{'biblioitemnumber'};
+        if (! ($biblioitemnumber =~ /^\d+$/) ) {
+            $error .= "C4::Biblio::_koha_add_biblioitem():> biblioitemnumber $biblioitemnumber is not a number! Using a new biblioitemnumber\n";
+        }
+        elsif (! ($biblioitemnumber > 0)) {
+            $error .= "C4::Biblio::_koha_add_biblioitem():> biblioitemnumber $biblioitemnumber is not greater than 0! Using a new biblioitemnumber\n";
+        }
+        #The real Perl LONG_MAX is 2147483646, but using 2147483640
+        #  so we can detect the imminent primary key exhaustion before it actually is exhausted.
+        elsif (! ($biblioitemnumber < 2147483640)) {
+            $error .= "C4::Biblio::_koha_add_biblioitem():> biblioitemnumber $biblioitemnumber is too large for Perl! Using a new biblioitemnumber\n";
+        }
+        else {
+            #We have validated the biblionumber and can prepare to insert it.
+            $isBiblioitemNumberOk = 'biblioitemnumber = ?,';
+        }
+
+    }
+
     my ($cn_sort) = GetClassSort( $biblioitem->{'biblioitems.cn_source'}, $biblioitem->{'cn_class'}, $biblioitem->{'cn_item'} );
     my $query = "INSERT INTO biblioitems SET
+        $isBiblioitemNumberOk
         biblionumber    = ?,
         volume          = ?,
         number          = ?,
@@ -3219,24 +3282,45 @@ sub _koha_add_biblioitem {
         agerestriction  = ?
         ";
     my $sth = $dbh->prepare($query);
-    $sth->execute(
-        $biblioitem->{'biblionumber'},     $biblioitem->{'volume'},           $biblioitem->{'number'},                $biblioitem->{'itemtype'},
-        $biblioitem->{'isbn'},             $biblioitem->{'issn'},             $biblioitem->{'publicationyear'},       $biblioitem->{'publishercode'},
-        $biblioitem->{'volumedate'},       $biblioitem->{'volumedesc'},       $biblioitem->{'collectiontitle'},       $biblioitem->{'collectionissn'},
-        $biblioitem->{'collectionvolume'}, $biblioitem->{'editionstatement'}, $biblioitem->{'editionresponsibility'}, $biblioitem->{'illus'},
-        $biblioitem->{'pages'},            $biblioitem->{'bnotes'},           $biblioitem->{'size'},                  $biblioitem->{'place'},
-        $biblioitem->{'lccn'},             $biblioitem->{'marc'},             $biblioitem->{'url'},                   $biblioitem->{'biblioitems.cn_source'},
-        $biblioitem->{'cn_class'},         $biblioitem->{'cn_item'},          $biblioitem->{'cn_suffix'},             $cn_sort,
-        $biblioitem->{'totalissues'},      $biblioitem->{'ean'},              $biblioitem->{'agerestriction'}
-    );
-    my $bibitemnum = $dbh->{'mysql_insertid'};
+
+    if ($isBiblioitemNumberOk) {
+        $sth->execute(
+            $biblioitem->{'biblioitemnumber'},
+            $biblioitem->{'biblionumber'},     $biblioitem->{'volume'},           $biblioitem->{'number'},                $biblioitem->{'itemtype'},
+            $biblioitem->{'isbn'},             $biblioitem->{'issn'},             $biblioitem->{'publicationyear'},       $biblioitem->{'publishercode'},
+            $biblioitem->{'volumedate'},       $biblioitem->{'volumedesc'},       $biblioitem->{'collectiontitle'},       $biblioitem->{'collectionissn'},
+            $biblioitem->{'collectionvolume'}, $biblioitem->{'editionstatement'}, $biblioitem->{'editionresponsibility'}, $biblioitem->{'illus'},
+            $biblioitem->{'pages'},            $biblioitem->{'bnotes'},           $biblioitem->{'size'},                  $biblioitem->{'place'},
+            $biblioitem->{'lccn'},             $biblioitem->{'marc'},             $biblioitem->{'url'},                   $biblioitem->{'biblioitems.cn_source'},
+            $biblioitem->{'cn_class'},         $biblioitem->{'cn_item'},          $biblioitem->{'cn_suffix'},             $cn_sort,
+            $biblioitem->{'totalissues'},      $biblioitem->{'ean'},              $biblioitem->{'agerestriction'}
+        );
+    }
+    else {
+        $sth->execute(
+            $biblioitem->{'biblionumber'},     $biblioitem->{'volume'},           $biblioitem->{'number'},                $biblioitem->{'itemtype'},
+            $biblioitem->{'isbn'},             $biblioitem->{'issn'},             $biblioitem->{'publicationyear'},       $biblioitem->{'publishercode'},
+            $biblioitem->{'volumedate'},       $biblioitem->{'volumedesc'},       $biblioitem->{'collectiontitle'},       $biblioitem->{'collectionissn'},
+            $biblioitem->{'collectionvolume'}, $biblioitem->{'editionstatement'}, $biblioitem->{'editionresponsibility'}, $biblioitem->{'illus'},
+            $biblioitem->{'pages'},            $biblioitem->{'bnotes'},           $biblioitem->{'size'},                  $biblioitem->{'place'},
+            $biblioitem->{'lccn'},             $biblioitem->{'marc'},             $biblioitem->{'url'},                   $biblioitem->{'biblioitems.cn_source'},
+            $biblioitem->{'cn_class'},         $biblioitem->{'cn_item'},          $biblioitem->{'cn_suffix'},             $cn_sort,
+            $biblioitem->{'totalissues'},      $biblioitem->{'ean'},              $biblioitem->{'agerestriction'}
+        );
+    }
+
+    $biblioitemnumber = $isBiblioitemNumberOk ? $biblioitemnumber : $dbh->{'mysql_insertid'};
 
     if ( $dbh->errstr ) {
         $error .= "ERROR in _koha_add_biblioitem $query" . $dbh->errstr;
+    }
+
+    if (defined $error) {
         warn $error;
     }
+
     $sth->finish();
-    return ( $bibitemnum, $error );
+    return ( $biblioitemnumber, $error );
 }
 
 =head2 _koha_delete_biblio

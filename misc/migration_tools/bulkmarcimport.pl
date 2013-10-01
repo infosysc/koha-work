@@ -34,7 +34,7 @@ use Pod::Usage;
 use open qw( :std :encoding(UTF-8) );
 binmode( STDOUT, ":encoding(UTF-8)" );
 my ( $input_marc_file, $number, $offset) = ('',0,0);
-my ($version, $delete, $test_parameter, $skip_marc8_conversion, $char_encoding, $verbose, $commit, $fk_off,$format,$biblios,$authorities,$keepids,$match, $isbn_check, $logfile);
+my ($version, $delete, $test_parameter, $skip_marc8_conversion, $char_encoding, $verbose, $commit, $fk_off,$format,$biblios,$authorities,$keepids,$match, $isbn_check, $logfile, $legacyIdAsBiblionumberFromHere);
 my ( $insert, $filters, $update, $all, $yamlfile, $authtypes );
 my $cleanisbn = 1;
 my ($sourcetag,$sourcesubfield,$idmapfl, $dedup_barcode);
@@ -73,6 +73,7 @@ GetOptions(
     'yaml:s'        => \$yamlfile,
     'dedupbarcode' => \$dedup_barcode,
     'framework=s' => \$framework,
+	'g|legacyIdAsBiblionumberFromHere:s' => \$legacyIdAsBiblionumberFromHere,
 );
 $biblios ||= !$authorities;
 $insert  ||= !$update;
@@ -166,14 +167,23 @@ if ( $offset ) {
     $batch->next() while ($offset--);
 }
 
-my ($tagid,$subfieldid);
+my ($tagid, $subfieldid, $binum_tagid, $binum_subfieldid);
 if ($authorities){
 	  $tagid='001';
 }
 else {
    ( $tagid, $subfieldid ) =
             GetMarcFromKohaField( "biblio.biblionumber", $framework );
+   ( $binum_tagid, $binum_subfieldid ) =
+            GetMarcFromKohaField( "biblioitems.biblioitemnumber", $framework );
 	$tagid||="001";
+
+	#This is important for the functionality $legacyIdAsBiblionumberFromHere
+	if ($tagid ne $binum_tagid) {
+		warn "Koha to MARC mapping values biblio.biblionumber and biblioitems.biblioitemnumber must share the same MARC field!";
+		exit(1);
+	}
+
 }
 
 # the SQL query to search on isbn
@@ -204,6 +214,26 @@ RECORD: while (  ) {
     $i++;
     print ".";
     print "\n$i" unless $i % 100;
+
+
+
+	### If you are like me and don't have the legacy id in $999c and $999d, you
+	###   can use this functionality to copy the id on the fly.
+	### By default, copy legacy id field 001 to 999c and 999d ###
+	if ($legacyIdAsBiblionumberFromHere) {
+		my $legacyIdField = $record->field( $legacyIdAsBiblionumberFromHere );
+		if ($legacyIdField) {
+			my $legacyId = $legacyIdField->data();
+			my $biblionumberField = MARC::Field->new( $tagid, '', '',
+			   $subfieldid => $legacyId,
+			   $binum_subfieldid => $legacyId,
+			);
+			$record->append_fields($biblionumberField);
+		}
+		else {
+			warn "No $legacyIdAsBiblionumberFromHere found!";
+		}
+	}
     
     # transcode the record to UTF8 if needed & applicable.
     if ($record->encoding() eq 'MARC-8' and not $skip_marc8_conversion) {
@@ -582,11 +612,28 @@ bulkmarcimport.pl - Import bibliographic/authority records into Koha
  $ perl misc/migration_tools/bulkmarcimport.pl -d -commit 1000 \\
     -file /home/jmf/koha.mrc -n 3000
 
+ Migrate your legacy bibliographic records to Koha, while having the legacy id
+ in a field $999 according to your directives here
+ "Administration" > "Koha to Marc mapping".
+ You also have the legacy id in field $001 so your analytic and component
+ records links wont be broken.
+ $ perl misc/migration_tools/bulkmarcimport.pl -d -commit 1000 \\
+    -file /home/jmf/koha.marcxml -m MARCXML -b
+
 =head1 WARNING
 
 Don't use this script before you've entered and checked your MARC parameters
 tables twice (or more!). Otherwise, the import won't work correctly and you
 will get invalid data.
+
+If you want to assign your legacy bibliographic id as the biblionumber and
+biblioitemnumber in Koha biblio- and bibliotiems -tables, you must first
+specify the mappings in "Administration" > "Koha to MARC mapping".
+
+It is extremely recommended to use field $999 to migrate your legacy id's.
+If you set it to for ex. 001, librarians might manually reuse an existing id.
+Also make sure that the legacy id is a strict positive integer and less than
+perl -MPOSIX -le 'print LONG_MAX'.
 
 =head1 DESCRIPTION
 
@@ -687,6 +734,12 @@ Field store ids in I<FIELD> (usefull for authorities, where 001 contains the
 authid for Koha, that can contain a very valuable info for authorities coming
 from LOC or BNF. useless for biblios probably)
 
+If your legacy id is already in 001, or the field you want it in. Dont use this
+parameter as it will move the biblionumber from your definition at
+"Administration" > "Koha to Marc mapping" as a duplicate of your original id.
+Thus you lose your MARC-field mapped to biblionumber before the record is
+processed.
+
 =item B<-match>=<FIELD>
 
 I<FIELD> matchindex,fieldtomatch matchpoint to use to deduplicate fieldtomatch
@@ -733,6 +786,19 @@ is useful when something has set barcodes to be a biblio ID, or similar
 This is the code for the framework that the requested records will have attached
 to them when they are created. If not specified, then the default framework
 will be used.
+
+=item B<-g, -legacyIdAsBiblionumberFromHere>=<FIELD>
+
+If you already have your legacy database id in your marc record and want to
+preserve it, but still want to get it set as the biblionumber and biblioitemnumber
+in Kohas database, use this.
+
+Example:
+Field 001 has your legacy id.
+Koha to MARC mapping needs legacy id in 999c and 999d as well for biblionumber
+and biblioitemnumber, use
+ -g 001
+to copy the legacy id to field 999cd and thus get the id preserved in DB.
 
 =back
 
