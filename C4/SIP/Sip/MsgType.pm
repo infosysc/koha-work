@@ -629,7 +629,7 @@ sub handle_checkin {
 
 	$current_loc = $fields->{(FID_CURRENT_LOCN)};
 	$inst_id     = $fields->{(FID_INST_ID)};
-	$item_id     = substr($fields->{(FID_ITEM_ID)}, 2);
+	$item_id     = $fields->{(FID_ITEM_ID)};
 	$item_props  = $fields->{(FID_ITEM_PROPS)};
 	$cancel      = $fields->{(FID_CANCEL)};
 
