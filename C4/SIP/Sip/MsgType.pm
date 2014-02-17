@@ -512,8 +512,8 @@ sub handle_checkout {
     $patron_id = $fields->{(FID_PATRON_ID)};
     $item_id   = $fields->{(FID_ITEM_ID)};
  
-    # Strip leading '01' from item id, if present:
-    if ($item_id =~ /^01/) {
+    # Strip leading '10' from item id, if present:
+    if ($item_id =~ /^10/) {
       $item_id = substr($item_id, 2);
     }
 
@@ -633,8 +633,8 @@ sub handle_checkin {
 	$item_props  = $fields->{(FID_ITEM_PROPS)};
 	$cancel      = $fields->{(FID_CANCEL)};
 
-    # Strip leading '01' from item id, if present:
-    if ($item_id =~ /^01/) {
+    # Strip leading '10' from item id, if present:
+    if ($item_id =~ /^10/) {
       $item_id = substr($item_id, 2);
     }
 
