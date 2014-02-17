@@ -511,7 +511,11 @@ sub handle_checkout {
 
     $patron_id = $fields->{(FID_PATRON_ID)};
     $item_id   = $fields->{(FID_ITEM_ID)};
-
+ 
+    # Strip leading '10' from item id, if present:
+    if ($item_id =~ /^10/) {
+      $item_id = substr($item_id, 2);
+    }
 
     if ($no_block eq 'Y') {
 	# Off-line transactions need to be recorded, but there's
@@ -628,6 +632,12 @@ sub handle_checkin {
 	$item_id     = $fields->{(FID_ITEM_ID)};
 	$item_props  = $fields->{(FID_ITEM_PROPS)};
 	$cancel      = $fields->{(FID_CANCEL)};
+
+    # Strip leading '10' from item id, if present:
+    if ($item_id =~ /^10/) {
+      $item_id = substr($item_id, 2);
+    }
+
     if ($current_loc) {
         $my_branch = $current_loc;# most scm do not set $current_loc
     }
