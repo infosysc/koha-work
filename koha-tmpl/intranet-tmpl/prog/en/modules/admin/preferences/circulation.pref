@@ -625,3 +625,13 @@ Circulation:
                   yes: Use
                   no: "Don't use"
             - course reserves
+
+    RFID:
+        -
+            - pref: UseRFIDHub
+              choices:
+                  yes: Use
+                  no: "Don't use"
+            - the RFIDHub located at 
+            - pref: RFIDHubURL
+            - "Please note: You need to set up an RFID hub for this to work!"
