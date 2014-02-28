@@ -1108,7 +1108,13 @@ sub handle_item_information {
 
     $ils->check_inst_id($fields->{(FID_INST_ID)}, "handle_item_information");
 
-    $item =  $ils->find_item($fields->{(FID_ITEM_ID)});
+    # Strip leading '10' from item id, if present:
+    if ($fields->{(FID_ITEM_ID)} =~ /^10/) {
+      $fields->{(FID_ITEM_ID)} = substr($fields->{(FID_ITEM_ID)}, 2);
+    }
+
+    $item = $ils->find_item($fields->{(FID_ITEM_ID)});
+
 
     if (!defined($item)) {
 	# Invalid Item ID
@@ -1177,6 +1183,11 @@ sub handle_item_status_update {
 
     $item_id = $fields->{(FID_ITEM_ID)};
     $item_props = $fields->{(FID_ITEM_PROPS)};
+
+    # Strip leading '10' from item id, if present:
+    if ($item_id =~ /^10/) {
+      $item_id = substr($item_id, 2);
+    }
 
 	if (!defined($item_id)) {
 		syslog("LOG_WARNING",
