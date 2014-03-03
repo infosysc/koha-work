@@ -687,7 +687,7 @@ No patron matched <span class="ex">[% message %]</span>
 </div>
 
 <div class="yui-g">
-[% IF Koha.Preference( 'UseRFIDHub' ) == '1' %]<div id="rfid-checkouts"></div>[% END %]
+[% IF Koha.Preference( 'UseRFIDHub' ) == '1' %]<div id="rfidlist"></div>[% END %]
 <div id="patronlists" class="toptabs">
 
 <ul>
