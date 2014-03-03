@@ -10,6 +10,7 @@ var rfidhuburl = "[% Koha.Preference( 'RFIDHubURL' ) %]";
 
 $(document).ready(function() {
   var ws=new WebSocket(rfidhuburl);
+  var body_id = $("body").attr("id");
   ws.onopen = function() {
     console.log("connected");
 
@@ -23,7 +24,11 @@ $(document).ready(function() {
             alert("ERROR connecting to SIP Server, please ask Zarathustra for help!");
           } else {
             console.log("Connected to RFIDhub");
-            ws.send(JSON.stringify({Action: "CHECKIN"}));
+            if (body_id == "circ_returns") { 
+              ws.send(JSON.stringify({Action: "CHECKIN"})); 
+            } else if (body_id == "circ_circulation") {
+              ws.send(JSON.stringify({Action: "CHECKOUT"})); 
+            }
           }
           break;
         case "DISCONNECT":
@@ -31,11 +36,12 @@ $(document).ready(function() {
           break;
         case "CHECKIN":
           console.log(" <- "+resp.data);
-          if (data.Item.OK) { handleCheckinItem(data.Item) };
+          handleItem(data);
           break;
         case "CHECKOUT":
           // TODO: handle checkout
           console.log(" <- "+resp.data);
+          handleItem(data);
           break;
         case "WRITE":
           // TODO: handle write
@@ -53,24 +59,16 @@ $(document).ready(function() {
   }
 });
 
-function handleCheckinItem(msg) {
+function handleItem(msg) {
   
-  // Create div if not exists
-  if ($('#rfidlist').length == 0) {
-    var rfiddiv = $('<div/>', {
-      id: 'rfidlist',
-      class: 'toptabs ui-tabs ui-widget ui-widget-content ui-corner-all'
-    }).prependTo('#patronlists');
-  } else {
-    var rfiddiv = $('#rfidlist');
-  }
+  var rfiddiv = getRfidDiv();
 
   // create table, headers and tbody if not exists
-  if ($('#rfidissues').length == 0) {
-    var table = $('<table/>', { id: 'rfidissues' });
+  if ($('#rfiditems').length == 0) {
+    var table = $('<table/>', { id: 'rfiditems' });
     table.append('<thead>' +
       '<tr>' +
-        '<th scope="col">Levert</th>' +
+        '<th scope="col">Dato</th>' +
         '<th scope="col">Tittel</th>' +
         '<th scope="col">Forfatter</th>' +
         '<th scope="col">Lånt ut fra</th>' +
@@ -83,25 +81,42 @@ function handleCheckinItem(msg) {
   }
 
   // create row
-  var row = $('<tr>').attr('id', msg.Barcode)
-    .append('<td><span title="dato">'+Date.parse(msg.Date)+'</span></td>')
-    .append('<td><strong>'+msg.Label+'</strong></a></td>') 
+  var row = $('<tr>').attr('id', msg.Item.Barcode)
+    .append('<td><span title="dato">'+msg.Item.Date+'</span></td>')
+    .append('<td><strong>'+msg.Item.Label+'</strong></a></td>') 
     .append($('<td>'))
     .append($('<td>'))
     .append($('<td>'))
     .append('<td><a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber='+
-        msg.Barcode+'&amp;type=intra">'+msg.Barcode+'</a></td>')
-    .append('<td>'+msg.Status);
+        msg.Item.Barcode+'&amp;type=intra">'+msg.Item.Barcode+'</a></td>')
+    .append('<td>'+msg.Item.Status);
 
-  rfiddiv.find('tbody').prepend(row);
+  // if row with id already exists: update - else prepend
+  if($("#" + msg.Item.Barcode).length == 0) {
+    rfiddiv.find('tbody').prepend(row);
+  } else {
+    rfiddiv.find($("#" + msg.Item.Barcode).parent('tr')).replaceWith(row);
+  }
 
   // highlight according to result 
-  if(msg.OK) {
-    console.log("OKEY");
+  if(msg.Item.OK) {
     row.children('td').effect("highlight", {color: "lightgreen"}, 3000);
   } else {
-    console.log("NOT OKEY");
     row.children('td').css("backgroundColor", "pink");
   }
 }
+
+function getRfidDiv() {
+  // Create div with id rfidlist if not exists
+  if ($('#rfidlist').length == 0) {
+    var rfiddiv = $('<div/>', {
+      id: 'rfidlist',
+      class: 'toptabs ui-tabs ui-widget ui-widget-content ui-corner-all'
+    }).prependTo('#patronlists');
+  } else {
+    var rfiddiv = $('#rfidlist');
+  }
+  return rfiddiv
+}
+
 </script>
