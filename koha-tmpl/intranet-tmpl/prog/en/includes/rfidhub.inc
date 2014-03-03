@@ -27,7 +27,7 @@ $(document).ready(function() {
             if (body_id == "circ_returns") { 
               ws.send(JSON.stringify({Action: "CHECKIN"})); 
             } else if (body_id == "circ_circulation") {
-              ws.send(JSON.stringify({Action: "CHECKOUT", Patron: "[% borrower.borrowernumber %]"})); 
+              ws.send(JSON.stringify({Action: "CHECKOUT", Patron: "[% borrower.cardnumber %]"})); 
             }
           }
           break;
@@ -95,7 +95,7 @@ function handleItem(msg) {
   if($("#" + msg.Item.Barcode).length == 0) {
     rfiddiv.find('tbody').prepend(row);
   } else {
-    rfiddiv.find($("#" + msg.Item.Barcode).parent('tr')).replaceWith(row);
+    rfiddiv.find($("#" + msg.Item.Barcode).closest('tr')).replaceWith(row);
   }
 
   // highlight according to result 
