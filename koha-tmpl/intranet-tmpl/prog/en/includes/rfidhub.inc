@@ -23,6 +23,7 @@ $(document).ready(function() {
             alert("ERROR connecting to SIP Server, please ask Zarathustra for help!");
           } else {
             console.log("Connected to RFIDhub");
+            ws.send(JSON.stringify({Action: "CHECKIN"}));
           }
           break;
         case "DISCONNECT":
@@ -45,6 +46,10 @@ $(document).ready(function() {
   }
   ws.onclose = function() {
     console.log("disconnected");
+  }
+  ws.onerror = function() {
+    console.log("No connection to RFIDhub!");
+    alert("ERROR connecting to RFIDhub, please refresh Browser with F5 to try again!");
   }
 });
 
