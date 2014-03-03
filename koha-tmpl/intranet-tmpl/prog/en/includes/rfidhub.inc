@@ -9,7 +9,7 @@ var rfidhuburl = "[% Koha.Preference( 'RFIDHubURL' ) %]";
  */
 
 $(document).ready(function() {
-  var ws=new WebSocket('ws://localhost:8899/ws');
+  var ws=new WebSocket(rfidhuburl);
   ws.onopen = function() {
     console.log("connected");
 
@@ -80,12 +80,10 @@ function handleCheckinItem(msg) {
   // create row
   var row = $('<tr>').attr('id', msg.Barcode)
     .append('<td><span title="dato">'+Date.parse(msg.Date)+'</span></td>')
-    .append('<td>' +
-        '<strong>'+msg.Label+'</strong></a>' +
-      '</td>')
-    .append($('<td>')) +
-    .append($('<td>')) +
-    .append($('<td>')) +
+    .append('<td><strong>'+msg.Label+'</strong></a></td>') 
+    .append($('<td>'))
+    .append($('<td>'))
+    .append($('<td>'))
     .append('<td><a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber='+
         msg.Barcode+'&amp;type=intra">'+msg.Barcode+'</a></td>')
     .append('<td>'+msg.Status);
