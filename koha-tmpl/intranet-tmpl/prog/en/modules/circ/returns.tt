@@ -1,5 +1,6 @@
 [% USE KohaDates %]
 [% USE Branches %]
+[% USE Koha %]
 
 [% INCLUDE 'doc-head-open.inc' %]
 <title>Koha &rsaquo; Circulation &rsaquo; Check in [% title |html %]</title>
@@ -44,8 +45,8 @@ $(document).ready(function () {
     [% END %]
 });
 //]]>
-[% IF Koha.Preference( 'UseRFIDHub' ) == '1' %][% INCLUDE 'rfidhub.inc' %][% END %]
 </script>
+[% IF Koha.Preference( 'UseRFIDHub' ) == '1' %][% INCLUDE 'rfidhub.inc' %][% END %]
 </head>
 <body id="circ_returns" class="circ">
 
