@@ -86,8 +86,8 @@ $(document).ready(function () {
     [% END %]
 });
 //]]>
-[% IF Koha.Preference( 'UseRFIDHub' ) == '1' %][% INCLUDE 'rfidhub.inc' %][% END %]
 </script>
+[% IF Koha.Preference( 'UseRFIDHub' ) == '1' %][% INCLUDE 'rfidhub.inc' %][% END %]
 </head>
 <body id="circ_returns" class="circ">
 
