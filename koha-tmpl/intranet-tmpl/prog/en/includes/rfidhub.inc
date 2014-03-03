@@ -27,7 +27,7 @@ $(document).ready(function() {
             if (body_id == "circ_returns") { 
               ws.send(JSON.stringify({Action: "CHECKIN"})); 
             } else if (body_id == "circ_circulation") {
-              ws.send(JSON.stringify({Action: "CHECKOUT"})); 
+              ws.send(JSON.stringify({Action: "CHECKOUT", Patron: "[% borrower.borrowernumber %]"})); 
             }
           }
           break;
