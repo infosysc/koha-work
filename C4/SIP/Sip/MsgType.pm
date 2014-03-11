@@ -18,6 +18,7 @@ use Sip::Checksum qw(verify_cksum);
 use Data::Dumper;
 use CGI;
 use C4::Auth qw(&check_api_auth);
+use C4::Context;
 
 use UNIVERSAL qw(can);	# make sure this is *after* C4 modules.
 
@@ -511,7 +512,9 @@ sub handle_checkout {
 
     $patron_id = $fields->{(FID_PATRON_ID)};
     $item_id   = $fields->{(FID_ITEM_ID)};
-
+    
+    my $userenv = C4::Context->userenv;
+    $userenv->{'branch'} = $fields->{(FID_INST_ID)};
 
     if ($no_block eq 'Y') {
 	# Off-line transactions need to be recorded, but there's
