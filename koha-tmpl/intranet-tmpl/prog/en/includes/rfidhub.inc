@@ -1,6 +1,38 @@
 [% USE Koha %]
-<link rel="stylesheet" type="text/css" href="[% interface %]/lib/bootstrap/bootstrap.min.css" />
-<script type="text/javascript" src="[% interface %]/lib/bootstrap/bootstrap.min.js"></script>
+<style type="text/css">
+.overlay    { position: fixed; top:0; left:0; width:100%; height: 100%; z-index:99;
+              background-color:#000; background: rgba(0,0,0,0.8); /*pointer-events:none;*/ }
+
+#writeRFIDDialog {
+  width: 430px; margin: 60px auto; padding: 60px 30px;
+  background: #c9d0de; border: 1px solid #e1e1e1;
+  border-radius: 5px; -moz-border-radius: 5px; -webkit-border-radius: 5px;
+  -moz-box-shadow: 0px 0px 8px #444;
+  -webkit-box-shadow: 0px 0px 8px #444;
+}
+
+#writeRFIDDialog label {
+  float: left; clear: left; margin: 11px 20px 0 0; width: 95px;
+  text-align: right; font-size: 16px; color: #445668;
+  text-transform: uppercase; text-shadow: 0px 1px 0px #f2f2f2;
+}
+
+#writeRFIDDialog input {
+  width: 260px; height: 35px; padding: 5px 20px 0px 20px; margin: 0 0 20px 0;
+  background: #5E768D;
+  border-radius: 5px; -moz-border-radius: 5px; -webkit-border-radius: 5px;
+  -moz-box-shadow: 0px 1px 0px #f2f2f2;-webkit-box-shadow: 0px 1px 0px #f2f2f2;
+  font-family: sans-serif; font-size: 16px; color: #f2f2f2; text-shadow: 0px -1px 0px #334f71;
+}
+
+#writeRFIDDialog a { float: right;}
+#writeRFIDDialog input::-webkit-input-placeholder  {
+      color: #a1b2c3; text-shadow: 0px -1px 0px #38506b;
+}
+#writeRFIDDialog input:-moz-placeholder {
+      color: #a1b2c3; text-shadow: 0px -1px 0px #38506b;
+}
+</style>
 <script type="text/javascript">
 var rfidhuburl = "[% Koha.Preference( 'RFIDHubURL' ) %]";
 /*
@@ -37,6 +69,7 @@ $(document).ready(function() {
           break;
         case "DISCONNECT":
           console.log("Disconnected from RFIDhub");
+          alert("Disconnected from RFIDHub, please refresh Browser with F5 to try to reconnect!");
           break;
         case "CHECKIN":
           console.log(" <- "+resp.data);
@@ -48,13 +81,19 @@ $(document).ready(function() {
           break;
         case "ITEM-INFO":
           console.log(" <- "+resp.data);
-          displayItemInfo(data.Item)
+          if (data.Item.Unknown) { // Failed to Look up Item
+            $('#itemStatusDiv').toggleClass('hidden', false);
+            $('#itemStatus').text("Could not find Item with barcode: "+data.Item.Barcode);
+            $('#itemStatus').attr("style", "background-color: pink");
+          } else {
+            displayItemInfo(data.Item)
+          }
           break;
         case "WRITE":
           console.log(" <- "+resp.data);
           $('#itemStatusDiv').toggleClass('hidden', false);
           if (data.RFIDError) { // Failed to Write
-            $('#itemStatus').text("ERROR writing tag, try again or call it a day!");
+            $('#itemStatus').text("ERROR: "+data.Item.Status);
             $('#itemStatus').attr("style", "background-color: pink");
           } else {
             $('#itemStatus').text("SUCCESS writing tag!");
@@ -120,31 +159,39 @@ function handleItem(msg) {
   }
 }
 
-
 function activateWrite() {
-  // End Scan session first and activate Write Dialog
+  // End Scan session first and activate Write Modal Dialog
   ws.send(JSON.stringify({Action: "END" }));
   buildWriteRFIDModal();
-  $("#writeRFIDModal").modal('show');
+  $("#writeRFIDModal").toggleClass('hidden', false);
+}
+
+function deactivateWrite() {
+  // End Scan session first and activate Write Modal Dialog
+  ws.send(JSON.stringify({Action: "CHECKIN" }));
+  $("#writeRFIDModal").toggleClass('hidden', true);
+  return true;
 }
 
 function buildWriteRFIDModal() {
   var writeRFIDModal = getWriteRFIDModal();
-  writeRFIDModal.html('<div class="modal-header">'+
-  '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>'+
-  '<h3 id="writeRFID">Write RFID Tag</h3></div>'+
-  '<div class="modal-body">'+
-  '<p><input id="barcodeInput" placeholder="barcode here" class="input-xlarge"></p>'+
+  writeRFIDModal.html('<div id="writeRFIDDialog">'+
+  '<h3>Write RFID Tag</h3>'+
+  '<label for="name">barcode:</label>'+
+  '<input type="text" id="barcodeInput" placeholder="barcode here">'+
   '<div id="itemInfoDiv" class="hidden">'+
-  '<p><input id="itemLabel" type="text" class="input-xlarge" disabled="disabled"></p>'+
-  '<p><input id="itemTags" type="number" ></p>'+
+  '<label for="name">Label:</label>'+
+  '<input type="text" id="itemLabel" disabled="disabled">'+
+  '<label for="name">NumTags:</label>'+
+  '<input type="number" id="itemTags">'+
   '</div>'+
-  '<div id="itemStatusDiv" class="hidden"></div>'+
+  '<div id="itemStatusDiv" class="hidden">'+
   '<p id="itemStatus">&nbsp;</p>'+
   '</div>'+
-  '<div class="modal-footer">'+
-  '<a href="#" id="writeButton" class="hidden btn btn-danger" onclick="return writeItem();">preg brikker</a>'+
-  '<a href="#" class="btn btn-success" onclick="return lookupItem();">søk opp bok</a></div>');
+  '<div id="writeRFIDButtons">'+
+  '<a href="#" id="writeButton" class="hidden btn btn-small" onclick="return writeItem();">Preg brikker</a></div>'+
+  '<a href="#" class="btn btn-small" onclick="return lookupItem();">Søk opp bok</a>'+
+  '<a href="#" class="btn btn-small" onclick="return deactivateWrite();">Avslutt</a></div>');
 }
 
 function lookupItem() {
@@ -186,11 +233,7 @@ function getWriteRFIDModal() {
   if ($('#writeRFIDModal').length == 0) {
     var writeRFIDModal = $('<div/>', {
       id: 'writeRFIDModal',
-      class: 'modal hide fade',
-      tabindex: '-1',
-      role: 'dialog',
-      "aria-labelledby": 'writeRFID',
-      "aria-hidden": true
+      class: 'overlay'
     }).prependTo('#rfidlist');
   } else {
     var writeRFIDModal = $('#writeRFIDModal');
