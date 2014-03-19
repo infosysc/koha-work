@@ -1,4 +1,6 @@
 [% USE Koha %]
+<link rel="stylesheet" type="text/css" href="[% interface %]/lib/bootstrap/bootstrap.min.css" />
+<script type="text/javascript" src="[% interface %]/lib/bootstrap/bootstrap.min.js"></script>
 <script type="text/javascript">
 var rfidhuburl = "[% Koha.Preference( 'RFIDHubURL' ) %]";
 /*
@@ -9,8 +11,10 @@ var rfidhuburl = "[% Koha.Preference( 'RFIDHubURL' ) %]";
  */
 
 $(document).ready(function() {
-  var ws=new WebSocket(rfidhuburl);
+  ws=new WebSocket(rfidhuburl);
   var body_id = $("body").attr("id");
+  // activate RFID Modal
+  $("#menu ul").append('<li><a href="#" onclick="activateWrite();">RFID</a></li>');
   ws.onopen = function() {
     console.log("connected");
 
@@ -39,13 +43,23 @@ $(document).ready(function() {
           handleItem(data);
           break;
         case "CHECKOUT":
-          // TODO: handle checkout
           console.log(" <- "+resp.data);
           handleItem(data);
           break;
-        case "WRITE":
-          // TODO: handle write
+        case "ITEM-INFO":
           console.log(" <- "+resp.data);
+          displayItemInfo(data.Item)
+          break;
+        case "WRITE":
+          console.log(" <- "+resp.data);
+          $('#itemStatusDiv').toggleClass('hidden', false);
+          if (data.RFIDError) { // Failed to Write
+            $('#itemStatus').text("ERROR writing tag, try again or call it a day!");
+            $('#itemStatus').attr("style", "background-color: pink");
+          } else {
+            $('#itemStatus').text("SUCCESS writing tag!");
+            $('#itemStatus').attr("style", "background-color: lightgreen");
+          }
           break;
       }
     }
@@ -98,12 +112,59 @@ function handleItem(msg) {
     rfiddiv.find($("#" + msg.Item.Barcode).closest('tr')).replaceWith(row);
   }
 
-  // highlight according to result 
+  // highlight according to success or failure
   if(msg.Item.OK) {
     row.children('td').effect("highlight", {color: "lightgreen"}, 3000);
   } else {
     row.children('td').css("backgroundColor", "pink");
   }
+}
+
+
+function activateWrite() {
+  buildWriteRFIDModal();
+  $("#writeRFIDModal").modal('show');
+}
+
+function buildWriteRFIDModal() {
+  var writeRFIDModal = getWriteRFIDModal();
+  writeRFIDModal.html('<div class="modal-header">'+
+  '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>'+
+  '<h3 id="writeRFID">Write RFID Tag</h3></div>'+
+  '<div class="modal-body">'+
+  '<p><input id="barcodeInput" placeholder="barcode here" class="input-xlarge"></p>'+
+  '<div id="itemInfoDiv" class="hidden">'+
+  '<p><input id="itemLabel" type="text" class="input-xlarge" disabled="disabled"></p>'+
+  '<p><input id="itemTags" type="number" ></p>'+
+  '</div>'+
+  '<div id="itemStatusDiv" class="hidden"></div>'+
+  '<p id="itemStatus">&nbsp;</p>'+
+  '</div>'+
+  '<div class="modal-footer">'+
+  '<a href="#" id="writeButton" class="hidden btn btn-danger" onclick="return writeItem();">preg brikker</a>'+
+  '<a href="#" class="btn btn-success" onclick="return lookupItem();">søk opp bok</a></div>');
+}
+
+function lookupItem() {
+  // End session and request item info
+  ws.send(JSON.stringify({Action: "END" }));
+  ws.send(JSON.stringify({Action: "ITEM-INFO", Item: { Barcode: $('#barcodeInput').val() } }));
+  return true;
+}
+
+function writeItem() {
+  var msg = JSON.stringify({Action: "WRITE", Item: { Barcode: $('#barcodeInput').val(), NumTags: parseInt($('#itemTags').val()) } });
+  console.log(msg);
+  ws.send(msg);
+  return true;
+}
+
+function displayItemInfo(item) {
+  console.log(item);
+  $("#itemLabel").attr("value", item.Label);
+  $("#itemTags").attr("value", item.NumTags);
+  $("#itemInfoDiv").toggleClass('hidden', false);
+  $("#writeButton").toggleClass('hidden', false);
 }
 
 function getRfidDiv() {
@@ -116,7 +177,24 @@ function getRfidDiv() {
   } else {
     var rfiddiv = $('#rfidlist');
   }
-  return rfiddiv
+  return rfiddiv;
+}
+
+function getWriteRFIDModal() {
+  // Create modal div with id writeRFIDModal if not exists
+  if ($('#writeRFIDModal').length == 0) {
+    var writeRFIDModal = $('<div/>', {
+      id: 'writeRFIDModal',
+      class: 'modal hide fade',
+      tabindex: '-1',
+      role: 'dialog',
+      "aria-labelledby": 'writeRFID',
+      "aria-hidden": true
+    }).prependTo('#rfidlist');
+  } else {
+    var writeRFIDModal = $('#writeRFIDModal');
+  }
+  return writeRFIDModal;
 }
 
 </script>
