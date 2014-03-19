@@ -122,6 +122,8 @@ function handleItem(msg) {
 
 
 function activateWrite() {
+  // End Scan session first and activate Write Dialog
+  ws.send(JSON.stringify({Action: "END" }));
   buildWriteRFIDModal();
   $("#writeRFIDModal").modal('show');
 }
@@ -146,8 +148,7 @@ function buildWriteRFIDModal() {
 }
 
 function lookupItem() {
-  // End session and request item info
-  ws.send(JSON.stringify({Action: "END" }));
+  // Request item info
   ws.send(JSON.stringify({Action: "ITEM-INFO", Item: { Barcode: $('#barcodeInput').val() } }));
   return true;
 }
