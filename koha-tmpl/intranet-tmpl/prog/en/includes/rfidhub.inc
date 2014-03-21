@@ -3,6 +3,9 @@
 .overlay    { position: fixed; top:0; left:0; width:100%; height: 100%; z-index:99;
               background-color:#000; background: rgba(0,0,0,0.8); /*pointer-events:none;*/ }
 
+#RFIDStatus { clear: left; margin-left: 10px; }
+#RFIDStatus .btn { margin-right: 10px; background-image: none; background-color: orange;}
+
 #writeRFIDDialog {
   width: 430px; margin: 60px auto; padding: 60px 30px;
   background: #c9d0de; border: 1px solid #e1e1e1;
@@ -46,73 +49,87 @@ $(document).ready(function() {
   ws=new WebSocket(rfidhuburl);
   state = $("body").attr("id");
   // activate RFID Modal
-  $("#menu ul").append('<li><a href="#" onclick="activateWrite();">RFID</a></li>');
+  $("#menu ul").append('<li><a href="#" onclick="activateWrite();">Preg RFID</a></li>');
+  $("div.gradient").append('<div id="RFIDStatus"><a href="#" class="btn btn-small" onclick="reconnectHUB();">RFID</a><span id="RFIDStatusMessage"></span></div>');
   ws.onopen = function() {
     console.log("connected");
 
     ws.onmessage = function(resp) {
       var data = JSON.parse(resp.data);
-      switch (data.Action) {
-        case "CONNECT":
-          if (data.RFIDError) { // RFIDhun cannot access RFID
-            alert("ERROR connecting to RFID, please refresh Browser with F5 to try again!");
-          } else if (data.SIPError) { // RFIDhub cannot access SIP Server
-            alert("ERROR connecting to SIP Server, please ask Zarathustra for help or refresh browser!");
-          } else if (data.USERError) { // User initiated error
-            alert("ERROR in use of API, please ask Zarathustra for help or refresh browser!");
-          } else {
+      // Major Error handling
+      if (data.RFIDError) { // RFIDhun cannot access RFID
+        $('#RFIDStatus .btn').css("backgroundColor", "red");
+        $('#RFIDStatusMessage').text("ERROR connecting to RFID, please press button or refresh Browser to try again!");
+      } else if (data.SIPError) { // RFIDhub cannot access SIP Server
+        $('#RFIDStatus .btn').css("backgroundColor", "red");
+        $('#RFIDStatusMessage').text("ERROR connecting to SIP Server, please ask Zarathustra for help or refresh browser!");
+      } else if (data.UserError) { // User initiated error
+        $('#RFIDStatus .btn').css("backgroundColor", "red");
+        $('#RFIDStatusMessage').text(data.ErrorMessage);
+      } else {
+        // Handle messages
+        switch (data.Action) {
+          case "CONNECT":
             console.log("Connected to RFIDhub");
+            $('#RFIDStatus .btn').css("backgroundColor", "lightgreen");
             if (state == "circ_returns") {
               ws.send(JSON.stringify({Action: "CHECKIN"}));
             } else if (state == "circ_circulation") {
               ws.send(JSON.stringify({Action: "CHECKOUT", Patron: "[% borrower.cardnumber %]"})); 
             }
-          }
-          break;
-        case "DISCONNECT":
-          console.log("Disconnected from RFIDhub");
-          alert("Disconnected from RFIDHub, please refresh Browser with F5 to try to reconnect!");
-          break;
-        case "CHECKIN":
-          console.log(" <- "+resp.data);
-          handleItem(data);
-          break;
-        case "CHECKOUT":
-          console.log(" <- "+resp.data);
-          handleItem(data);
-          break;
-        case "ITEM-INFO":
-          console.log(" <- "+resp.data);
-          if (data.Item.Unknown) { // Failed to Look up Item
+            break;
+          case "DISCONNECT":
+            console.log("Disconnected from RFIDhub");
+            $('#RFIDStatus .btn').css("backgroundColor", "red");
+            $('#RFIDStatusMessage').text("Disconnected from RFIDHub, please refresh Browser to try to reconnect!");
+            break;
+          case "CHECKIN":
+            console.log(" <- "+resp.data);
+            handleItem(data);
+            break;
+          case "CHECKOUT":
+            console.log(" <- "+resp.data);
+            handleItem(data);
+            break;
+          case "ITEM-INFO":
+            console.log(" <- "+resp.data);
+            if (data.Item.Unknown) { // Failed to Look up Item
+              $('#itemStatusDiv').toggleClass('hidden', false);
+              $('#itemStatus').text("Could not find Item with barcode: "+data.Item.Barcode);
+              $('#itemStatus').attr("style", "background-color: pink");
+            } else {
+              displayItemInfo(data.Item)
+            }
+            break;
+          case "WRITE":
+            console.log(" <- "+resp.data);
             $('#itemStatusDiv').toggleClass('hidden', false);
-            $('#itemStatus').text("Could not find Item with barcode: "+data.Item.Barcode);
-            $('#itemStatus').attr("style", "background-color: pink");
-          } else {
-            displayItemInfo(data.Item)
+            if (data.Item.WriteFailed || data.Item.TagCountFailed) { // Failed to Write
+              $('#itemStatus').text("ERROR: "+data.Item.Status);
+              $('#itemStatus').attr("style", "background-color: pink");
+            } else {
+              $('#itemStatus').text("SUCCESS writing tag!");
+              $('#itemStatus').attr("style", "background-color: lightgreen");
+            }
+            break;
           }
-          break;
-        case "WRITE":
-          console.log(" <- "+resp.data);
-          $('#itemStatusDiv').toggleClass('hidden', false);
-          if (data.WriteFailed) { // Failed to Write
-            $('#itemStatus').text("ERROR: "+data.Item.Status);
-            $('#itemStatus').attr("style", "background-color: pink");
-          } else {
-            $('#itemStatus').text("SUCCESS writing tag!");
-            $('#itemStatus').attr("style", "background-color: lightgreen");
-          }
-          break;
       }
     }
   }
   ws.onclose = function() {
     console.log("disconnected");
+    $('#RFIDStatus .btn').css("backgroundColor", "orange");
   }
   ws.onerror = function() {
     console.log("No connection to RFIDhub!");
-    alert("ERROR connecting to RFIDhub, please refresh Browser with F5 to try again!");
+    $('#RFIDStatus .btn').css("backgroundColor", "red");
+    $('#RFIDStatusMessage').text("ERROR connecting to RFIDhub, please refresh Browser to try again!");
   }
 });
+
+function reconnectHUB() {
+  window.location.reload();
+}
 
 function handleItem(msg) {
   
