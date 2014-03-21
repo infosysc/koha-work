@@ -44,7 +44,7 @@ var rfidhuburl = "[% Koha.Preference( 'RFIDHubURL' ) %]";
 
 $(document).ready(function() {
   ws=new WebSocket(rfidhuburl);
-  var body_id = $("body").attr("id");
+  state = $("body").attr("id");
   // activate RFID Modal
   $("#menu ul").append('<li><a href="#" onclick="activateWrite();">RFID</a></li>');
   ws.onopen = function() {
@@ -57,12 +57,14 @@ $(document).ready(function() {
           if (data.RFIDError) { // RFIDhun cannot access RFID
             alert("ERROR connecting to RFID, please refresh Browser with F5 to try again!");
           } else if (data.SIPError) { // RFIDhub cannot access SIP Server
-            alert("ERROR connecting to SIP Server, please ask Zarathustra for help!");
+            alert("ERROR connecting to SIP Server, please ask Zarathustra for help or refresh browser!");
+          } else if (data.USERError) { // User initiated error
+            alert("ERROR in use of API, please ask Zarathustra for help or refresh browser!");
           } else {
             console.log("Connected to RFIDhub");
-            if (body_id == "circ_returns") { 
-              ws.send(JSON.stringify({Action: "CHECKIN"})); 
-            } else if (body_id == "circ_circulation") {
+            if (state == "circ_returns") {
+              ws.send(JSON.stringify({Action: "CHECKIN"}));
+            } else if (state == "circ_circulation") {
               ws.send(JSON.stringify({Action: "CHECKOUT", Patron: "[% borrower.cardnumber %]"})); 
             }
           }
@@ -92,7 +94,7 @@ $(document).ready(function() {
         case "WRITE":
           console.log(" <- "+resp.data);
           $('#itemStatusDiv').toggleClass('hidden', false);
-          if (data.RFIDError) { // Failed to Write
+          if (data.WriteFailed) { // Failed to Write
             $('#itemStatus').text("ERROR: "+data.Item.Status);
             $('#itemStatus').attr("style", "background-color: pink");
           } else {
@@ -152,10 +154,21 @@ function handleItem(msg) {
   }
 
   // highlight according to success or failure
-  if(msg.Item.OK) {
-    row.children('td').effect("highlight", {color: "lightgreen"}, 3000);
-  } else {
+  if(msg.Item.TransactionFailed) {
     row.children('td').css("backgroundColor", "pink");
+  } else if(msg.Item.AlarmOnFailed || msg.Item.AlarmOffFailed) {
+    row.children('td').css("backgroundColor", "pink");
+    row.append('<td><a href="#" class="btn btn-small" onclick="return retryAlarm();">Retry</a></td>');
+  } else {
+    row.children('td').effect("highlight", {color: "lightgreen"}, 3000);
+  }
+}
+
+function retryAlarm() {
+  if (state == "circ_returns") {
+    ws.send(JSON.stringify({Action: "RETRY-ALARM-ON"}));
+  } else if (state == "circ_circulation") {
+    ws.send(JSON.stringify({Action: "RETRY-ALARM-OFF"}));
   }
 }
 
@@ -168,7 +181,7 @@ function activateWrite() {
 
 function deactivateWrite() {
   // End Scan session first and activate Write Modal Dialog
-  ws.send(JSON.stringify({Action: "CHECKIN" }));
+  ws.send(JSON.stringify({Action: "CHECKOUT", Patron: "[% borrower.cardnumber %]" }));
   $("#writeRFIDModal").toggleClass('hidden', true);
   return true;
 }
