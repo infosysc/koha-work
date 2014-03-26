@@ -3227,7 +3227,8 @@ sub _koha_add_biblioitem {
     my $biblioitemnumber;
     my $isBiblioitemNumberOk = ''; #placeholder for the sql-clause which inserts biblionumber
     if (exists $biblioitem->{'biblioitemnumber'}) {
-        $biblioitemnumber = $biblioitem->{'biblioitemnumber'};
+         $biblioitemnumber = $biblioitem->{'biblioitemnumber'};
+         $biblioitemnumber = $1 if $biblioitemnumber =~ m/(\d+)/;
         if (! ($biblioitemnumber =~ /^\d+$/) ) {
             $error .= "C4::Biblio::_koha_add_biblioitem():> biblioitemnumber $biblioitemnumber is not a number! Using a new biblioitemnumber\n";
         }
