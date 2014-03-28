@@ -1,5 +1,8 @@
 [% USE Koha %]
 <style type="text/css">
+/*
+ * CSS to draw overlay, dialog box and RFID table output
+ */
 .overlay    { position: fixed; top:0; left:0; width:100%; height: 100%; z-index:99;
               background-color:#000; background: rgba(0,0,0,0.8); /*pointer-events:none;*/ }
 
@@ -35,6 +38,30 @@
 #writeRFIDDialog input:-moz-placeholder {
       color: #a1b2c3; text-shadow: 0px -1px 0px #38506b;
 }
+</style>
+<style type="text/css" media="print">
+  body {
+    visibility: hidden;
+  }
+  table {
+    visibility: visible;
+  }
+  /* reset table for slip printing */
+  table, caption, tbody, tfoot, thead, tr, th, td {
+    margin: 0;
+    border: 0;
+    font-size: 100%;
+  }
+  /* display only columns 1-6 and 10 */
+  th, td {
+    display: none;
+  }
+  th:nth-of-type(n+1):nth-of-type(-n+5),th:nth-of-type(10) {
+      display: table-cell;
+  }
+  td:nth-of-type(n+1):nth-of-type(-n+5),td:nth-of-type(10) {
+      display: table-cell;
+  }
 </style>
 <script type="text/javascript">
 var rfidhuburl = "[% Koha.Preference( 'RFIDHubURL' ) %]";
