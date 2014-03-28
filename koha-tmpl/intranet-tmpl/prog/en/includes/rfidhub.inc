@@ -48,9 +48,12 @@
   }
   /* reset table for slip printing */
   table, caption, tbody, tfoot, thead, tr, th, td {
+    position: absolute;
+    left: 0;
+    top: 0;
     margin: 0;
     border: 0;
-    font-size: 100%;
+    font-size: 8px;
   }
   /* display only columns 1-6 and 10 */
   th, td {
