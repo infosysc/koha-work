@@ -45,12 +45,12 @@
   }
   table {
     visibility: visible;
-  }
-  /* reset table for slip printing */
-  table, caption, tbody, tfoot, thead, tr, th, td {
     position: absolute;
     left: 0;
     top: 0;
+  }
+  /* reset table for slip printing */
+  tbody, tfoot, thead, tr, th, td {
     margin: 0;
     border: 0;
     font-size: 8px;
@@ -59,10 +59,10 @@
   th, td {
     display: none;
   }
-  th:nth-of-type(n+1):nth-of-type(-n+5),th:nth-of-type(10) {
+  th:nth-of-type(n+1):nth-of-type(-n+3),th:nth-of-type(n+5):nth-of-type(-n+7) {
       display: table-cell;
   }
-  td:nth-of-type(n+1):nth-of-type(-n+5),td:nth-of-type(10) {
+  td:nth-of-type(n+1):nth-of-type(-n+3),td:nth-of-type(n+5):nth-of-type(-n+7) {
       display: table-cell;
   }
 </style>
