@@ -209,6 +209,11 @@ function handleItem(msg) {
   } else {
     row.children('td').effect("highlight", {color: "lightgreen"}, 3000);
   }
+  // popup print dialog for transfers
+  if(msg.Item.Transfer) {
+    window.open('transfer-slip.pl?barcode='+msg.Item.Barcode+'&amp;branchcode='+msg.Item.Transfer+'&amp;op=slip', 'popup', 'width=600,height=400,resizable=1,toolbar=0,scrollbars=1,top');
+  }
+  
 }
 
 function retryAlarm() {
@@ -219,6 +224,9 @@ function retryAlarm() {
   }
 }
 
+/*
+ * WRITE RFID 
+ */
 function activateWrite() {
   // End Scan session first and activate Write Modal Dialog
   ws.send(JSON.stringify({Action: "END" }));
@@ -285,6 +293,13 @@ function getRfidDiv() {
   } else {
     var rfiddiv = $('#rfidlist');
   }
+  // Also add button to print entire list
+  if ($('#printSlipButton').length == 0) {
+    var printBtnDiv = $('<div/>', {id: 'printSlipButton'});
+    printBtnDiv.append('<a href="#" class="btn btn-small" onclick="return window.print();">print</a>');
+    rfiddiv.prepend(printBtnDiv);
+  }
+
   return rfiddiv;
 }
 
