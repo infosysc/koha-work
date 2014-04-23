@@ -54,6 +54,7 @@
     margin: 0;
     border: 0 !important;
     font-size: 8px !important;
+    width: auto;
   }
   /* display only columns 1-6 and 10 */
   th, td {
