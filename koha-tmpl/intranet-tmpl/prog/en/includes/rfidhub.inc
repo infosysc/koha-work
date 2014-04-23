@@ -50,19 +50,19 @@
     top: 0;
   }
   /* reset table for slip printing */
-  tbody, tfoot, thead, tr, th, td {
+  table, tbody, tfoot, thead, tr, th, td {
     margin: 0;
-    border: 0;
-    font-size: 8px;
+    border: 0 !important;
+    font-size: 8px !important;
   }
   /* display only columns 1-6 and 10 */
   th, td {
     display: none;
   }
-  th:nth-of-type(n+1):nth-of-type(-n+3),th:nth-of-type(n+5):nth-of-type(-n+7) {
+  th:nth-of-type(n+1):nth-of-type(-n+2),th:nth-of-type(n+6) {
       display: table-cell;
   }
-  td:nth-of-type(n+1):nth-of-type(-n+3),td:nth-of-type(n+5):nth-of-type(-n+7) {
+  td:nth-of-type(n+1):nth-of-type(-n+2),td:nth-of-type(n+6) {
       display: table-cell;
   }
 </style>
