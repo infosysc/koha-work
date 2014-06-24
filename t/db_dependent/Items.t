@@ -20,9 +20,10 @@ use Modern::Perl;
 
 use MARC::Record;
 use C4::Biblio;
+use C4::Branch;
 use Koha::Database;
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 BEGIN {
     use_ok('C4::Items');
@@ -38,8 +39,7 @@ subtest 'General Add, Get and Del tests' => sub {
     $dbh->{AutoCommit} = 0;
     $dbh->{RaiseError} = 1;
 
-    # Helper biblio.
-    diag("Creating biblio instance for testing.");
+    # Create a biblio instance for testing
     my ($bibnum, $bibitemnum) = get_biblio();
 
     # Add an item.
@@ -143,6 +143,44 @@ subtest 'GetHiddenItemnumbers tests' => sub {
     $dbh->rollback;
 };
 
+subtest 'GetItemsInfo tests' => sub {
+
+    plan tests => 3;
+
+    # Start transaction
+    $dbh->{AutoCommit} = 0;
+    $dbh->{RaiseError} = 1;
+
+    my $homebranch    = 'CPL';
+    my $holdingbranch = 'MPL';
+
+    # Add a biblio
+    my $biblionumber = get_biblio();
+    # Add an item
+    my ($item_bibnum, $item_bibitemnum, $itemnumber)
+        = AddItem({
+                homebranch    => $homebranch,
+                holdingbranch => $holdingbranch
+            }, $biblionumber );
+
+    my $branch = GetBranchDetail( $homebranch );
+    $branch->{ opac_info } = "homebranch OPAC info";
+    ModBranch($branch);
+
+    $branch = GetBranchDetail( $holdingbranch );
+    $branch->{ opac_info } = "holdingbranch OPAC info";
+    ModBranch($branch);
+
+    my @results = GetItemsInfo( $biblionumber );
+    ok( @results, 'GetItemsInfo returns results');
+    is( $results[0]->{ home_branch_opac_info }, "homebranch OPAC info",
+        'GetItemsInfo returns the correct home branch OPAC info notice' );
+    is( $results[0]->{ holding_branch_opac_info }, "holdingbranch OPAC info",
+        'GetItemsInfo returns the correct holding branch OPAC info notice' );
+
+    $dbh->rollback;
+};
+
 subtest q{Test Koha::Database->schema()->resultset('Item')->itemtype()} => sub {
 
     plan tests => 2;
@@ -169,10 +207,10 @@ subtest q{Test Koha::Database->schema()->resultset('Item')->itemtype()} => sub {
     my $biblioitem = $biblio->biblioitem();
     my ( $item ) = $biblioitem->items();
 
-    $schema->resultset('Systempreference')->update_or_create({ variable => 'item-level_itypes', value => 0 });
+    C4::Context->set_preference( 'item-level_itypes', 0 );
     ok( $item->effective_itemtype() eq 'BIB_LEVEL', '$item->itemtype() returns biblioitem.itemtype when item-level_itypes is disabled' );
 
-    $schema->resultset('Systempreference')->update_or_create({ variable => 'item-level_itypes', value => 1 });
+    C4::Context->set_preference( 'item-level_itypes', 1 );
     ok( $item->effective_itemtype() eq 'ITEM_LEVEL', '$item->itemtype() returns items.itype when item-level_itypes is disabled' );
 
 

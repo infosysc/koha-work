@@ -348,7 +348,7 @@ Circulation:
               choices:
                   yes: Allow
                   no: "Don't allow"
-            - patrons to check out multiple items from the same record, except for records with subscriptions.
+            - "patrons to check out multiple items from the same record.  (NOTE: This will only effect records without a subscription attached.)"
     Checkin Policy:
         -
             - pref: BlockReturnOfWithdrawnItems
@@ -625,3 +625,13 @@ Circulation:
                   yes: Use
                   no: "Don't use"
             - course reserves
+
+    RFID:
+        -
+            - pref: UseRFIDHub
+              choices:
+                  yes: Use
+                  no: "Don't use"
+            - the RFIDHub located at 
+            - pref: RFIDHubURL
+            - "Please note: You need to set up an RFID hub for this to work!"

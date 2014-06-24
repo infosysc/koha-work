@@ -87,6 +87,7 @@ $(document).ready(function () {
 });
 //]]>
 </script>
+[% IF Koha.Preference( 'UseRFIDHub' ) == '1' %][% INCLUDE 'rfidhub.inc' %][% END %]
 </head>
 <body id="circ_returns" class="circ">
 
@@ -516,7 +517,9 @@ $(document).ready(function () {
         </div>
     </form>
 </div>
-
+[% IF Koha.Preference( 'UseRFIDHub' ) == '1' %]
+    <div id="rfidlist"></div>
+[% END %]
 [% IF ( riloop ) %]
     <h2>Checked-in items</h2>
     <table>
