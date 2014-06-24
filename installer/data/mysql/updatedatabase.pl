@@ -8560,7 +8560,7 @@ if ( CheckVersion($DBversion) ) {
     SetVersion($DBversion);
 }
 
-$DBversion = "3.15.00.XXX";
+$DBversion = "3.17.00.XXX";
 if ( C4::Context->preference("Version") < TransformToNum($DBversion) ) {
     $dbh->do("INSERT IGNORE INTO systempreferences (variable,value,options,explanation,type) VALUES('RFIDHubURL','','','URL for the RFID hub.','Free'), ('UseRFIDHub','0', NULL, 'Use an RFID hub for talking to RFID equipment', 'YesNo')");
     print "Upgrade to $DBversion done (Bug 11858: Add RFID for circulation)\n";
