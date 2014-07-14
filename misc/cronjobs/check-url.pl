@@ -106,7 +106,7 @@ sub check_biblio {
     my $bad_url         = $self->{ bad_url      };
 
     my $record = GetMarcBiblio( $biblionumber ); 
-    return unless $record->field('856');
+    return unless (defined $record && $record->field('856'));
 
     my @urls = ();
     foreach my $field ( $record->field('856') ) {
